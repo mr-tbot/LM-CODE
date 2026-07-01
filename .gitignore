@@ -1,0 +1,12 @@
+node_modules/
+out/
+*.vsix
+.vscode-test/
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.crt
+lmstudio-copilot-config.json
+lm-code-config.json

@@ -1,0 +1,150 @@
+{
+  "name": "lm-code",
+  "displayName": "LM-CODE",
+  "description": "Expose one or more LM Studio servers as language models in GitHub Copilot Chat.",
+  "version": "0.8.0",
+  "publisher": "monsi",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": ["AI", "Chat", "Other"],
+  "activationEvents": [
+    "onStartupFinished",
+    "onLanguageModelChat:lmstudio"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languageModelChatProviders": [
+      {
+        "vendor": "lmstudio",
+        "displayName": "LM Studio"
+      }
+    ],
+    "commands": [
+      {
+        "command": "lmstudioCopilot.openSettings",
+        "title": "LM-CODE: Open Settings Panel",
+        "category": "LM-CODE"
+      },
+      {
+        "command": "lmstudioCopilot.refreshNow",
+        "title": "LM-CODE: Refresh Models Now",
+        "category": "LM-CODE"
+      },
+      {
+        "command": "lmstudioCopilot.addServer",
+        "title": "LM-CODE: Add Server",
+        "category": "LM-CODE"
+      },
+      {
+        "command": "lmstudioCopilot.exportConfig",
+        "title": "LM-CODE: Export Configuration",
+        "category": "LM-CODE"
+      },
+      {
+        "command": "lmstudioCopilot.importConfig",
+        "title": "LM-CODE: Import Configuration",
+        "category": "LM-CODE"
+      }
+    ],
+    "configuration": {
+      "title": "LM-CODE",
+      "properties": {
+        "lmstudioCopilot.servers": {
+          "type": "array",
+          "default": [
+            {
+              "id": "default",
+              "name": "Local LM Studio",
+              "baseUrl": "http://localhost:1234",
+              "apiKey": "",
+              "enabled": true,
+              "timeoutMs": 60000,
+              "headers": {},
+              "refreshIntervalSec": 0,
+              "hiddenModels": []
+            }
+          ],
+          "description": "List of LM Studio servers. Edit via the LM-CODE settings panel.",
+          "items": {
+            "type": "object",
+            "required": ["id", "baseUrl"],
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "baseUrl": { "type": "string" },
+              "apiKey": { "type": "string" },
+              "enabled": { "type": "boolean" },
+              "timeoutMs": { "type": "number" },
+              "headers": { "type": "object" },
+              "refreshIntervalSec": {
+                "type": "number",
+                "description": "Per-server override. 0 = use global."
+              },
+              "hiddenModels": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          }
+        },
+        "lmstudioCopilot.refreshIntervalSec": {
+          "type": "number",
+          "default": 60,
+          "minimum": 0,
+          "description": "Global refresh interval in seconds for polling LM Studio /v1/models. 0 disables auto-refresh."
+        },
+        "lmstudioCopilot.showStatusBar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show a status bar item with the number of available models."
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "lmstudioCopilot",
+          "title": "LM-CODE",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "lmstudioCopilot": [
+        {
+          "id": "lmstudioCopilot.servers",
+          "name": "Servers & Models"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "lmstudioCopilot.openSettings",
+          "when": "view == lmstudioCopilot.servers",
+          "group": "navigation"
+        },
+        {
+          "command": "lmstudioCopilot.refreshNow",
+          "when": "view == lmstudioCopilot.servers",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package",
+    "lint": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.95.0",
+    "@vscode/vsce": "^3.2.0",
+    "typescript": "^5.4.0"
+  }
+}
