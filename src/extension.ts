@@ -51,7 +51,7 @@ export function activate(context: vscode.ExtensionContext): void {
                 baseUrl: 'http://localhost:1234',
                 apiKey: '',
                 enabled: true,
-                timeoutMs: 60000,
+                timeoutMs: 300000,
                 headers: {},
                 refreshIntervalSec: 0,
                 hiddenModels: []

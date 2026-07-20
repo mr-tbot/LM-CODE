@@ -28,7 +28,7 @@ Choose one option.
 2. Run:
 
 ```powershell
-code --install-extension lm-code-0.8.0.vsix
+code --install-extension lm-code-0.9.0.vsix
 ```
 
 ### Option B: Build from source
@@ -37,7 +37,7 @@ code --install-extension lm-code-0.8.0.vsix
 npm install
 npm run compile
 npm run package
-code --install-extension lm-code-0.8.0.vsix
+code --install-extension lm-code-0.9.0.vsix
 ```
 
 ## 4) First-Time Configuration
@@ -49,7 +49,7 @@ code --install-extension lm-code-0.8.0.vsix
    - Display name: Local LM Studio
    - Base URL: http://localhost:1234
    - API key: leave blank unless your endpoint requires it
-   - Timeout (ms): 60000
+   - Timeout (ms): 300000
 5. Click Test connection.
 6. Click Refresh Now.
 7. Select or hide models as needed.

@@ -1,6 +1,7 @@
 node_modules/
 out/
 *.vsix
+.agent/
 .vscode-test/
 .env
 .env.*

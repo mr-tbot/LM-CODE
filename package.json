@@ -2,7 +2,7 @@
   "name": "lm-code",
   "displayName": "LM-CODE",
   "description": "Expose one or more LM Studio servers as language models in GitHub Copilot Chat.",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "publisher": "monsi",
   "license": "MIT",
   "repository": {
@@ -68,7 +68,7 @@
               "baseUrl": "http://localhost:1234",
               "apiKey": "",
               "enabled": true,
-              "timeoutMs": 60000,
+              "timeoutMs": 300000,
               "headers": {},
               "refreshIntervalSec": 0,
               "hiddenModels": []

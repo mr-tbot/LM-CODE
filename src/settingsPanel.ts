@@ -64,7 +64,7 @@ export class SettingsPanel {
                         baseUrl: 'http://localhost:1234',
                         apiKey: '',
                         enabled: true,
-                        timeoutMs: 60000,
+                        timeoutMs: 300000,
                         headers: {},
                         refreshIntervalSec: 0,
                         hiddenModels: []
@@ -278,7 +278,7 @@ function renderServer(s) {
         + '  <label>Display name</label><input type="text" data-f="name" data-id="' + s.id + '" value="' + escapeHtml(s.name) + '" />'
         + '  <label>Base URL</label><input type="text" data-f="baseUrl" data-id="' + s.id + '" value="' + escapeHtml(s.baseUrl) + '" placeholder="http://localhost:1234" />'
         + '  <label>API key</label><input type="password" data-f="apiKey" data-id="' + s.id + '" value="' + escapeHtml(s.apiKey || '') + '" />'
-        + '  <label>Timeout (ms)</label><input type="number" data-f="timeoutMs" data-id="' + s.id + '" value="' + (s.timeoutMs ?? 60000) + '" min="1000" step="1000" />'
+        + '  <label>Timeout (ms)</label><input type="number" data-f="timeoutMs" data-id="' + s.id + '" value="' + (s.timeoutMs ?? 300000) + '" min="1000" step="1000" />'
         + '  <label>Refresh override (s)</label><input type="number" data-f="refreshIntervalSec" data-id="' + s.id + '" value="' + (s.refreshIntervalSec ?? 0) + '" min="0" />'
         + '</div>'
         + '<details style="margin-top:8px"><summary>Custom headers (JSON)</summary>'

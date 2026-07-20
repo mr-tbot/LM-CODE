@@ -25,7 +25,9 @@ export function getServers(): LMServerConfig[] {
         baseUrl: (s.baseUrl ?? '').replace(/\/+$/, ''),
         apiKey: s.apiKey ?? '',
         enabled: s.enabled !== false,
-        timeoutMs: s.timeoutMs ?? 60000,
+        // 60000 was the old shipped default and starves JIT model loads (>100s observed);
+        // treat it as "default" and migrate to the new 300s default.
+        timeoutMs: !s.timeoutMs || s.timeoutMs === 60000 ? 300000 : s.timeoutMs,
         headers: s.headers ?? {},
         refreshIntervalSec: s.refreshIntervalSec ?? 0,
         hiddenModels: s.hiddenModels ?? []
