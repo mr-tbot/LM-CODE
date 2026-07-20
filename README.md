@@ -10,6 +10,8 @@ LM-CODE lets you use one or more LM Studio servers as models inside GitHub Copil
 - Reasoning models (Qwen 3, DeepSeek R1, etc.) handled correctly: thinking output is filtered out of chat responses.
 - Robust streaming: mid-stream server errors are reported clearly instead of producing silent empty responses, and transient model-load failures are retried automatically.
 - Generous timeouts for just-in-time model loading (large models can take minutes to load before the first token).
+- LM Link aware: models mirrored across your machines are de-duplicated in the picker,
+  with per-server overrides and automatic failover to another server that has the model.
 - Test each server connection directly from the extension UI.
 - Auto-refresh available models.
 - Hide models you do not want in your picker.
@@ -97,6 +99,38 @@ Example:
   ]
 }
 ```
+
+## LM Link setups
+
+[LM Link](https://lmstudio.ai/link) makes every machine on the link report the whole
+network's models. Two recommended ways to use it with LM-CODE:
+
+**One hub server (simplest).** Add a single server — your local machine that is on the
+LM Link. Its listing already includes every model on the network, LM Studio routes each
+request to the right device, and the picker shows no duplicates.
+
+**Multiple servers.** Add each machine as its own server. Because every machine lists
+the whole network, LM-CODE de-duplicates by model identity: each model is provided by
+the first enabled server that lists it (drag your preferred server to the top of the
+`lmstudioCopilot.servers` array to prioritize it). The sidebar shows how many duplicate
+models were hidden per server — click that row (or use the per-server "Show duplicate
+models" toggle in the settings panel) to keep a server's copies visible, labeled as
+duplicates. Turn the global behavior off with:
+
+```json
+{
+  "lmstudioCopilot.dedupeAcrossServers": false
+}
+```
+
+**Failover.** If the providing server can't serve a model (LM Link drop, model not
+found, load failure) and nothing has been streamed yet, LM-CODE automatically retries
+the request on every other configured server that lists the same model.
+
+Note: LM Studio's REST API does not expose which LM Link device a model lives on, so
+de-duplication is by model identity (the same model name on two servers is treated as
+one model). For the same reason, hiding a model while de-dupe is on hides that model
+identity across all servers — otherwise it would just reappear from a mirror.
 
 ## Commands
 

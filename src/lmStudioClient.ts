@@ -149,8 +149,9 @@ export class LMStudioClient {
 
     /** Streaming chat completion. Emits text chunks and finalized tool calls.
      *  Transient model-load failures (JIT load races, LM Link drops) are retried once,
-     *  but only when no output has been emitted yet. */
-    async chat(req: ChatRequest, callbacks: StreamCallbacks, signal?: AbortSignal): Promise<void> {
+     *  but only when no output has been emitted yet. Pass noTransientRetry when the
+     *  caller does its own failover and wants single attempts. */
+    async chat(req: ChatRequest, callbacks: StreamCallbacks, signal?: AbortSignal, opts?: { noTransientRetry?: boolean }): Promise<void> {
         let anyOutput = false;
         const tracking: StreamCallbacks = {
             onText: t => { anyOutput = true; callbacks.onText(t); },
@@ -165,7 +166,7 @@ export class LMStudioClient {
             const msg = String(err?.message ?? err);
             // "Internal Server Error" HTML 500s are what flaky LM Link hops surface as.
             const transient = /failed to load model|lm link|no models loaded|model unloaded|internal server error|ended mid-tool-call/i.test(msg);
-            if (!transient || anyOutput || signal?.aborted) throw err;
+            if (!transient || anyOutput || signal?.aborted || opts?.noTransientRetry) throw err;
             await new Promise(r => setTimeout(r, 2500));
             // The user may have cancelled during the backoff — don't fire a zombie retry.
             if (signal?.aborted) throw err;
@@ -273,8 +274,15 @@ export class LMStudioClient {
             }
         }, signal);
 
-        // Flush any trailing buffered native markup as text or tool calls.
-        textParser.flush();
+        // Flush any trailing buffered native markup as text or tool calls — unless the
+        // stream died and nothing was emitted yet: then the buffer is a truncated
+        // fragment, and emitting it would both show garbage and mark the request as
+        // partially-answered (blocking clean retry/failover upstream).
+        if (streamError && !emittedText && !emittedToolCall) {
+            textParser.discardPending();
+        } else {
+            textParser.flush();
+        }
         // Safety net: emit any OpenAI-format tool calls that never got a finish_reason.
         flushPending(true);
 
@@ -501,6 +509,15 @@ export class NativeToolCallParser {
     push(text: string): void {
         this.buf += text;
         this.process(false);
+    }
+
+    /** Drop everything still buffered (used when the stream errored mid-markup). */
+    discardPending(): void {
+        if (this.inTool && this.currentDiscard) this.discardedChars += this.toolBuf.length;
+        this.buf = '';
+        this.toolBuf = '';
+        this.inTool = false;
+        this.currentDiscard = false;
     }
 
     flush(): void {

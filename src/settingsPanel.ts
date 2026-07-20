@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { getServers, setServers, getGlobalRefreshSec, setGlobalRefreshSec, LMServerConfig, cryptoRandomId } from './config';
+import { getServers, setServers, getGlobalRefreshSec, setGlobalRefreshSec, getDedupeAcrossServers, setDedupeAcrossServers, LMServerConfig, cryptoRandomId } from './config';
 import { LMStudioClient } from './lmStudioClient';
 import { ModelRegistry, DiscoveredModel } from './modelProvider';
 
@@ -56,6 +56,9 @@ export class SettingsPanel {
                 case 'saveRefresh':
                     await setGlobalRefreshSec(Number(msg.value) || 0);
                     return;
+                case 'saveDedupe':
+                    await setDedupeAcrossServers(msg.value === true);
+                    return;
                 case 'addServer': {
                     const servers = getServers();
                     servers.push({
@@ -102,7 +105,8 @@ export class SettingsPanel {
                 case 'exportConfig': {
                     const data = {
                         servers: getServers(),
-                        refreshIntervalSec: getGlobalRefreshSec()
+                        refreshIntervalSec: getGlobalRefreshSec(),
+                        dedupeAcrossServers: getDedupeAcrossServers()
                     };
                     const uri = await vscode.window.showSaveDialog({
                         filters: { JSON: ['json'] },
@@ -124,6 +128,7 @@ export class SettingsPanel {
                     const data = JSON.parse(Buffer.from(buf).toString('utf8'));
                     if (Array.isArray(data.servers)) await setServers(data.servers);
                     if (typeof data.refreshIntervalSec === 'number') await setGlobalRefreshSec(data.refreshIntervalSec);
+                    if (typeof data.dedupeAcrossServers === 'boolean') await setDedupeAcrossServers(data.dedupeAcrossServers);
                     vscode.window.showInformationMessage('Configuration imported.');
                     return;
                 }
@@ -134,11 +139,29 @@ export class SettingsPanel {
     }
 
     private postState(models: DiscoveredModel[]): void {
+        // The panel manages servers, so it shows each server's OWN listing (raw),
+        // annotated with what the deduped picker actually exposes.
+        const visible = new Set(models.map(m => `${m.server.id}::${m.model.id}`));
+        const dupFlags = new Map(models.map(m => [`${m.server.id}::${m.model.id}`, m]));
         this.panel.webview.postMessage({
             type: 'state',
             servers: getServers(),
             refreshIntervalSec: getGlobalRefreshSec(),
-            models: models.map(m => ({ serverId: m.server.id, id: m.model.id }))
+            dedupeAcrossServers: getDedupeAcrossServers(),
+            models: this.registry.getRawModels().map(m => {
+                const key = `${m.server.id}::${m.model.id}`;
+                const vis = dupFlags.get(key);
+                const primary = models.find(x => x.model.id === m.model.id && !x.isDuplicate);
+                return {
+                    serverId: m.server.id,
+                    id: m.model.id,
+                    inPicker: visible.has(key),
+                    isDuplicate: vis?.isDuplicate === true,
+                    alsoOn: vis?.alsoOn ?? [],
+                    providedBy: !visible.has(key) && primary && primary.server.id !== m.server.id
+                        ? primary.server.name : undefined
+                };
+            })
         });
     }
 
@@ -175,6 +198,8 @@ export class SettingsPanel {
     .model { display: flex; align-items: center; gap: 8px; padding: 2px 0; font-family: var(--vscode-editor-font-family); font-size: 0.92em; }
     .model.hidden { opacity: 0.55; text-decoration: line-through; }
     .status { font-size: 0.9em; margin-left: 8px; }
+    .badge { font-size: 0.82em; opacity: 0.75; border: 1px solid var(--vscode-panel-border); border-radius: 8px; padding: 0 6px; margin-left: 4px; }
+    .badge.dup { color: var(--vscode-descriptionForeground); font-style: italic; }
     .status.ok { color: var(--vscode-testing-iconPassed, #6cc26c); }
     .status.err { color: var(--vscode-errorForeground); }
     details summary { cursor: pointer; user-select: none; }
@@ -190,16 +215,27 @@ export class SettingsPanel {
     <label>Global refresh (sec):
         <input type="number" id="refreshSec" min="0" step="5" style="width: 80px" />
     </label>
+    <label title="With LM Link, every machine reports the whole network's models. When enabled, each model appears only once — from the first server that lists it.">
+        <input type="checkbox" id="dedupe" /> De-duplicate across servers (LM&nbsp;Link)
+    </label>
 </div>
 <div id="servers"></div>
 <script nonce="${nonce}">
 const vscode = acquireVsCodeApi();
 let state = { servers: [], refreshIntervalSec: 60, models: [] };
 
+let dirty = false; // unsaved local edits pending in the debounce window
 window.addEventListener('message', e => {
     const m = e.data;
     if (m.type === 'state') {
-        state = m;
+        if (dirty) {
+            // Keep the user's unsaved server edits; refresh only the derived bits.
+            state.models = m.models;
+            state.refreshIntervalSec = m.refreshIntervalSec;
+            state.dedupeAcrossServers = m.dedupeAcrossServers;
+        } else {
+            state = m;
+        }
         render();
     } else if (m.type === 'testResult') {
         const el = document.querySelector('[data-test-status="' + m.id + '"]');
@@ -217,21 +253,29 @@ document.getElementById('importBtn').addEventListener('click', () => vscode.post
 document.getElementById('refreshSec').addEventListener('change', e => {
     vscode.postMessage({ type: 'saveRefresh', value: Number(e.target.value) });
 });
+document.getElementById('dedupe').addEventListener('change', e => {
+    vscode.postMessage({ type: 'saveDedupe', value: e.target.checked });
+});
 
 function debounce(fn, ms) {
     let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
 }
-const saveServers = debounce(() => vscode.postMessage({ type: 'saveServers', servers: state.servers }), 400);
+const saveServers = debounce(() => {
+    vscode.postMessage({ type: 'saveServers', servers: state.servers });
+    dirty = false;
+}, 400);
 
 function setField(id, field, value) {
     const s = state.servers.find(x => x.id === id);
     if (!s) return;
     s[field] = value;
+    dirty = true;
     saveServers();
 }
 
 function render() {
     document.getElementById('refreshSec').value = state.refreshIntervalSec;
+    document.getElementById('dedupe').checked = state.dedupeAcrossServers !== false;
     const root = document.getElementById('servers');
     root.innerHTML = '';
     if (!state.servers.length) {
@@ -252,15 +296,21 @@ function escapeHtml(str) {
 }
 
 function renderServer(s) {
-    const liveModels = state.models.filter(m => m.serverId === s.id).map(m => m.id);
+    const liveModels = state.models.filter(m => m.serverId === s.id);
     const hiddenSet = new Set(s.hiddenModels || []);
-    const allKnown = Array.from(new Set([...liveModels, ...(s.hiddenModels || [])]));
+    const byId = new Map(liveModels.map(m => [m.id, m]));
+    const allKnown = Array.from(new Set([...liveModels.map(m => m.id), ...(s.hiddenModels || [])]));
     const modelRows = allKnown.length
         ? allKnown.map(id => {
             const hidden = hiddenSet.has(id);
+            const m = byId.get(id);
+            let badge = '';
+            if (m && m.isDuplicate) badge = '<span class="badge dup">duplicate of ' + escapeHtml((m.alsoOn || [])[0] || 'other server') + '</span>';
+            else if (m && m.providedBy) badge = '<span class="badge dup">provided by ' + escapeHtml(m.providedBy) + '</span>';
+            else if (m && (m.alsoOn || []).length) badge = '<span class="badge">also on ' + escapeHtml(m.alsoOn.join(', ')) + '</span>';
             return '<div class="model' + (hidden ? ' hidden' : '') + '">'
                 + '<input type="checkbox" data-hide="' + escapeHtml(s.id) + '|' + escapeHtml(id) + '" ' + (hidden ? '' : 'checked') + ' />'
-                + '<span>' + escapeHtml(id) + '</span>'
+                + '<span>' + escapeHtml(id) + '</span>' + badge
                 + '</div>';
           }).join('')
         : '<em>No models yet. Click "Test connection" or "Refresh now".</em>';
@@ -274,15 +324,17 @@ function renderServer(s) {
         + '  </div>'
         + '</div>'
         + '<div class="grid">'
-        + '  <label>Enabled</label><div><input type="checkbox" data-f="enabled" data-id="' + s.id + '" ' + (s.enabled ? 'checked' : '') + ' /></div>'
-        + '  <label>Display name</label><input type="text" data-f="name" data-id="' + s.id + '" value="' + escapeHtml(s.name) + '" />'
-        + '  <label>Base URL</label><input type="text" data-f="baseUrl" data-id="' + s.id + '" value="' + escapeHtml(s.baseUrl) + '" placeholder="http://localhost:1234" />'
-        + '  <label>API key</label><input type="password" data-f="apiKey" data-id="' + s.id + '" value="' + escapeHtml(s.apiKey || '') + '" />'
-        + '  <label>Timeout (ms)</label><input type="number" data-f="timeoutMs" data-id="' + s.id + '" value="' + (s.timeoutMs ?? 300000) + '" min="1000" step="1000" />'
-        + '  <label>Refresh override (s)</label><input type="number" data-f="refreshIntervalSec" data-id="' + s.id + '" value="' + (s.refreshIntervalSec ?? 0) + '" min="0" />'
+        + '  <label>Enabled</label><div><input type="checkbox" data-f="enabled" data-id="' + escapeHtml(s.id) + '" ' + (s.enabled ? 'checked' : '') + ' /></div>'
+        + '  <label>Display name</label><input type="text" data-f="name" data-id="' + escapeHtml(s.id) + '" value="' + escapeHtml(s.name) + '" />'
+        + '  <label>Base URL</label><input type="text" data-f="baseUrl" data-id="' + escapeHtml(s.id) + '" value="' + escapeHtml(s.baseUrl) + '" placeholder="http://localhost:1234" />'
+        + '  <label>API key</label><input type="password" data-f="apiKey" data-id="' + escapeHtml(s.id) + '" value="' + escapeHtml(s.apiKey || '') + '" />'
+        + '  <label>Timeout (ms)</label><input type="number" data-f="timeoutMs" data-id="' + escapeHtml(s.id) + '" value="' + (s.timeoutMs ?? 300000) + '" min="1000" step="1000" />'
+        + '  <label>Refresh override (s)</label><input type="number" data-f="refreshIntervalSec" data-id="' + escapeHtml(s.id) + '" value="' + (s.refreshIntervalSec ?? 0) + '" min="0" />'
+        + '  <label title="Keep this server\\'s copies visible even when another server already provides the same model">Show duplicate models</label>'
+        + '  <div><input type="checkbox" data-f="showDuplicateModels" data-id="' + escapeHtml(s.id) + '" ' + (s.showDuplicateModels ? 'checked' : '') + ' /></div>'
         + '</div>'
         + '<details style="margin-top:8px"><summary>Custom headers (JSON)</summary>'
-        + '  <textarea data-f="headers" data-id="' + s.id + '" rows="3" style="width:100%; margin-top:4px">' + escapeHtml(JSON.stringify(s.headers || {}, null, 2)) + '</textarea>'
+        + '  <textarea data-f="headers" data-id="' + escapeHtml(s.id) + '" rows="3" style="width:100%; margin-top:4px">' + escapeHtml(JSON.stringify(s.headers || {}, null, 2)) + '</textarea>'
         + '</details>'
         + '<div class="status" data-test-status="' + s.id + '"></div>'
         + '<div class="models">'

@@ -73,6 +73,15 @@ For each server:
 4. Test connection.
 5. Refresh models.
 
+### Using LM Link
+
+If your machines are connected with LM Link, every machine reports the whole network's
+models. Either add just one hub machine (it exposes everything, no duplicates), or add
+each machine and let LM-CODE de-duplicate the picker automatically. Use the
+"De-duplicate across servers" checkbox in the settings panel and the per-server
+"Show duplicate models" toggle to control this. If a server cannot serve a model,
+LM-CODE automatically fails over to another server that lists it.
+
 ## 7) Recommended Settings
 
 - Keep global refresh at `60` seconds for normal usage.

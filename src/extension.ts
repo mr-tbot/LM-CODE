@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { getServers, setServers, getShowStatusBar, cryptoRandomId } from './config';
 import { ModelRegistry } from './modelProvider';
-import { ServersTreeProvider, toggleModelHidden } from './serversTree';
+import { ServersTreeProvider, toggleModelHidden, toggleShowDuplicates } from './serversTree';
 import { SettingsPanel } from './settingsPanel';
 
 let registry: ModelRegistry;
@@ -61,6 +61,9 @@ export function activate(context: vscode.ExtensionContext): void {
         }),
         vscode.commands.registerCommand('lmstudioCopilot.toggleModelHidden',
             (serverId: string, modelId: string) => toggleModelHidden(serverId, modelId)
+        ),
+        vscode.commands.registerCommand('lmstudioCopilot.toggleShowDuplicates',
+            (serverId: string) => toggleShowDuplicates(serverId)
         ),
         vscode.commands.registerCommand('lmstudioCopilot.exportConfig', () =>
             vscode.commands.executeCommand('lmstudioCopilot.openSettings')

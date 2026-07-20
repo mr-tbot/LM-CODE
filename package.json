@@ -2,7 +2,7 @@
   "name": "lm-code",
   "displayName": "LM-CODE",
   "description": "Expose one or more LM Studio servers as language models in GitHub Copilot Chat.",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "publisher": "monsi",
   "license": "MIT",
   "repository": {
@@ -93,9 +93,18 @@
               "hiddenModels": {
                 "type": "array",
                 "items": { "type": "string" }
+              },
+              "showDuplicateModels": {
+                "type": "boolean",
+                "description": "Keep this server's copies of models visible even when another server already provides them."
               }
             }
           }
+        },
+        "lmstudioCopilot.dedupeAcrossServers": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show each model only once when several servers list it (common with LM Link, where every machine reports the whole network's models). The first enabled server that lists a model provides it; other copies are hidden unless that server sets showDuplicateModels."
         },
         "lmstudioCopilot.refreshIntervalSec": {
           "type": "number",
