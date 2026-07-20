@@ -143,6 +143,22 @@ at `http://localhost:1234/api/v0/models`.
 - Reasoning models think before answering; the thinking is hidden. If a model spends its
   entire output budget thinking, LM-CODE tells you in the response.
 
+### "No utility model is configured for 'copilot-utility-small'..." (VS Code 1.128+)
+
+VS Code needs a small "utility" model for background chores (chat titles, query rewriting)
+and defaults it to "none" when your main agent model is a bring-your-own model like LM-CODE's.
+Fix it in settings:
+
+```json
+{
+  "chat.byokUtilityModelDefault": "mainAgent"
+}
+```
+
+`"mainAgent"` keeps utility calls on your selected local model (fully local). Use
+`"copilot"` instead if you are signed in to GitHub Copilot and prefer its hosted
+utility models for those background tasks.
+
 ### First request to a model is slow or times out
 
 LM Studio loads models just-in-time; large models can take minutes before the first token.
