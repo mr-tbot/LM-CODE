@@ -132,6 +132,35 @@ de-duplication is by model identity (the same model name on two servers is treat
 one model). For the same reason, hiding a model while de-dupe is on hides that model
 identity across all servers — otherwise it would just reappear from a mirror.
 
+## Big context windows (256K → 1M)
+
+Context size is fixed when LM Studio **loads** the model — no API request can change it.
+LM-CODE advertises to Copilot whatever the model is actually loaded with.
+
+1. **Load the model with a bigger window.** LM Studio's GUI context slider stops at the
+   model's native maximum, but the CLI does not:
+
+   ```powershell
+   lms load "qwen/qwen3.6-35b-a3b" -c 1048576
+   ```
+
+   Watch memory: KV cache grows linearly with context and can dwarf the model weights.
+   Use `--estimate-only` first to preview the cost.
+2. **LM-CODE picks it up automatically** — discovery reads the actually-loaded context
+   from LM Studio's API on the next refresh and budgets Copilot prompts accordingly.
+3. **Or pin it manually** with a per-server override (settings panel → server →
+   "Context overrides", or in `settings.json`):
+
+   ```json
+   {
+     "contextOverrides": { "qwen/qwen3.6-35b-a3b": 1048576 }
+   }
+   ```
+
+Quality note: running far past the native window without RoPE/YaRN scaling weakens
+long-range recall. Models with a trained 1M variant (or YaRN-tuned GGUFs) behave much
+better at extreme contexts than a plain metadata override.
+
 ## Commands
 
 - `LM-CODE: Open Settings Panel`

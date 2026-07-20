@@ -66,8 +66,11 @@ export class LmStudioChatProvider implements vscode.LanguageModelChatProvider {
             // Embedding models can't be used for chat — exclude them.
             .filter(({ model }) => model.type !== 'embeddings' && !/embed/i.test(model.id))
             .map(({ server, model, alsoOn, isDuplicate }) => {
-                // Prefer the loaded context size; fall back to the model's max.
-                const ctx = model.loadedContextLength ?? model.maxContextLength ?? DEFAULT_CTX;
+                // Precedence: explicit user override > actually-loaded context > metadata max.
+                const override = server.contextOverrides?.[model.id];
+                const ctx = (typeof override === 'number' && override > 0)
+                    ? override
+                    : model.loadedContextLength ?? model.maxContextLength ?? DEFAULT_CTX;
                 const maxOutput = Math.min(MAX_OUTPUT_CAP, Math.max(1024, Math.floor(ctx / 4)));
                 // Always advertise tool calling: LM Studio prompt-bridges tools for models
                 // whose template lacks native support ([TOOL_REQUEST] format), and its
@@ -84,7 +87,7 @@ export class LmStudioChatProvider implements vscode.LanguageModelChatProvider {
                     detail: server.name,
                     tooltip: `${model.id} @ ${server.baseUrl}` +
                         (model.state ? ` — ${model.state}` : '') +
-                        ` — ctx ${ctx}` +
+                        ` — ctx ${ctx}${(typeof override === 'number' && override > 0) ? ' (override)' : ''}` +
                         (model.capabilities ? (nativeTools ? ' — native tools' : ' — bridged tools') : '') +
                         (isDuplicate ? ` — duplicate of ${alsoOn?.[0] ?? 'another server'}` :
                             (alsoOn && alsoOn.length > 0 ? ` — also on: ${alsoOn.join(', ')}` : '')),

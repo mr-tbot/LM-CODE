@@ -2,6 +2,23 @@
 
 All notable changes to LM-CODE.
 
+## 0.11.0 — 2026-07-20
+
+### Big context windows (256K → 1M and beyond)
+
+- **Actually-loaded context detection**: discovery now also reads
+  `/api/v1/models` `loaded_instances`, the only LM Studio endpoint that reports the
+  context a model is *really* loaded with. Load a model with a bigger window than its
+  metadata max (`lms load <model> -c 1048576`) and LM-CODE advertises the real value to
+  Copilot automatically on the next refresh.
+- **Per-model context overrides**: per-server `contextOverrides` map
+  (model id → tokens) in settings and in the settings panel ("Context overrides"
+  section). Wins over anything the server reports; tooltip marks overridden models.
+- Note: these settings change what Copilot budgets for a prompt. The server must
+  actually be loaded with the larger context — LM Studio's GUI slider caps at the
+  model's native max, but `lms load <model> -c <tokens>` does not. Extending far past
+  the native window without RoPE/YaRN scaling degrades long-range recall.
+
 ## 0.10.0 — 2026-07-20
 
 ### LM Link aware model management

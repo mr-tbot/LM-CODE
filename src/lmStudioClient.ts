@@ -109,7 +109,7 @@ export class LMStudioClient {
             const data = JSON.parse(res);
             const items: any[] = data.data ?? [];
             if (Array.isArray(items) && items.length > 0 && items.some(m => m.type !== undefined)) {
-                return items
+                const models = items
                     .filter(m => m.type !== 'embeddings')
                     .map(m => ({
                         id: m.id ?? m.name,
@@ -122,6 +122,8 @@ export class LMStudioClient {
                         loadedContextLength: typeof m.loaded_context_length === 'number' ? m.loaded_context_length : undefined,
                         capabilities: Array.isArray(m.capabilities) ? m.capabilities : undefined
                     }));
+                await this.enrichLoadedContext(models);
+                return models;
             }
         } catch { /* fall back to the OpenAI-compatible endpoint */ }
 
@@ -136,6 +138,23 @@ export class LMStudioClient {
                 serverId: this.server.id
             }))
             .filter(m => !/embed/i.test(m.id ?? ''));
+    }
+
+    /** Fill loadedContextLength from /api/v1/models loaded_instances — the only
+     *  endpoint that reports the context a model is ACTUALLY loaded with (which
+     *  can exceed the metadata max, e.g. after `lms load <model> -c 1048576`). */
+    private async enrichLoadedContext(models: LMStudioModel[]): Promise<void> {
+        try {
+            const res = await this.request('GET', '/api/v1/models');
+            const items: any[] = JSON.parse(res).models ?? [];
+            const byKey = new Map<string, any>(items.map(m => [m.key, m]));
+            for (const model of models) {
+                const v1 = byKey.get(model.id);
+                const inst = v1?.loaded_instances?.[0];
+                const ctx = inst?.config?.context_length ?? inst?.config?.max_context_length;
+                if (typeof ctx === 'number' && ctx > 0) model.loadedContextLength = ctx;
+            }
+        } catch { /* older server without /api/v1 — keep v0 data */ }
     }
 
     async testConnection(): Promise<{ ok: boolean; message: string; modelCount?: number }> {

@@ -15,6 +15,12 @@ export interface LMServerConfig {
     /** Keep this server's copies of models visible even when another server
      *  already provides them (see lmstudioCopilot.dedupeAcrossServers). */
     showDuplicateModels?: boolean;
+    /** Per-model advertised context-window overrides (model id -> tokens).
+     *  Use when a model is loaded with a larger context than its metadata
+     *  reports (e.g. `lms load <model> -c 1048576`) and the server API does
+     *  not reflect it. Only changes what Copilot budgets for — the server
+     *  must actually be loaded with that context. */
+    contextOverrides?: Record<string, number>;
 }
 
 const SECTION = 'lmstudioCopilot';
@@ -36,7 +42,8 @@ export function getServers(): LMServerConfig[] {
         headers: s.headers ?? {},
         refreshIntervalSec: s.refreshIntervalSec ?? 0,
         hiddenModels: s.hiddenModels ?? [],
-        showDuplicateModels: s.showDuplicateModels === true
+        showDuplicateModels: s.showDuplicateModels === true,
+        contextOverrides: (s.contextOverrides && typeof s.contextOverrides === 'object') ? s.contextOverrides : {}
     }));
 }
 

@@ -336,6 +336,10 @@ function renderServer(s) {
         + '<details style="margin-top:8px"><summary>Custom headers (JSON)</summary>'
         + '  <textarea data-f="headers" data-id="' + escapeHtml(s.id) + '" rows="3" style="width:100%; margin-top:4px">' + escapeHtml(JSON.stringify(s.headers || {}, null, 2)) + '</textarea>'
         + '</details>'
+        + '<details style="margin-top:8px"><summary>Context overrides (JSON: model id &rarr; tokens)</summary>'
+        + '  <div style="opacity:0.75; font-size:0.88em; margin:4px 0">Advertise a different context window to Copilot, e.g. {"qwen/qwen3.6-35b-a3b": 1048576}. The server must actually be loaded with that context (e.g. <code>lms load &lt;model&gt; -c 1048576</code>).</div>'
+        + '  <textarea data-f="contextOverrides" data-id="' + escapeHtml(s.id) + '" rows="3" style="width:100%; margin-top:4px">' + escapeHtml(JSON.stringify(s.contextOverrides || {}, null, 2)) + '</textarea>'
+        + '</details>'
         + '<div class="status" data-test-status="' + s.id + '"></div>'
         + '<div class="models">'
         + '  <h2 style="font-size:0.95em; margin:10px 0 4px">Models <small style="opacity:0.7">(uncheck to hide from Copilot)</small></h2>'
@@ -352,8 +356,15 @@ function wireServerHandlers() {
             let value;
             if (el.type === 'checkbox') value = el.checked;
             else if (el.type === 'number') value = Number(el.value);
-            else if (field === 'headers') {
+            else if (field === 'headers' || field === 'contextOverrides') {
                 try { value = JSON.parse(el.value || '{}'); } catch { return; }
+                if (field === 'contextOverrides') {
+                    for (const k of Object.keys(value)) {
+                        const n = Number(value[k]);
+                        if (!Number.isFinite(n) || n <= 0) delete value[k];
+                        else value[k] = Math.floor(n);
+                    }
+                }
             } else value = el.value;
             setField(id, field, value);
         });

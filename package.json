@@ -2,7 +2,7 @@
   "name": "lm-code",
   "displayName": "LM-CODE",
   "description": "Expose one or more LM Studio servers as language models in GitHub Copilot Chat.",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "publisher": "monsi",
   "license": "MIT",
   "repository": {
@@ -97,6 +97,11 @@
               "showDuplicateModels": {
                 "type": "boolean",
                 "description": "Keep this server's copies of models visible even when another server already provides them."
+              },
+              "contextOverrides": {
+                "type": "object",
+                "additionalProperties": { "type": "number" },
+                "description": "Per-model advertised context window override (model id -> tokens). Use when a model is loaded with a larger context than its metadata reports, e.g. after `lms load <model> -c 1048576`."
               }
             }
           }
