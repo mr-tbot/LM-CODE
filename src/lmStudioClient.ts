@@ -184,7 +184,9 @@ export class LMStudioClient {
         } catch (err: any) {
             const msg = String(err?.message ?? err);
             // "Internal Server Error" HTML 500s are what flaky LM Link hops surface as.
-            const transient = /failed to load model|lm link|no models loaded|model unloaded|internal server error|ended mid-tool-call/i.test(msg);
+            // "Engine protocol ... fetch failed" = LM Studio's internal engine/LM Link
+            // hop died mid-request (observed when a model crashes or is being reloaded).
+            const transient = /failed to load model|lm link|no models loaded|model unloaded|internal server error|ended mid-tool-call|engine protocol|predict request failed|fetch failed/i.test(msg);
             if (!transient || anyOutput || signal?.aborted || opts?.noTransientRetry) throw err;
             await new Promise(r => setTimeout(r, 2500));
             // The user may have cancelled during the backoff — don't fire a zombie retry.

@@ -166,7 +166,7 @@ export class LmStudioChatProvider implements vscode.LanguageModelChatProvider {
             // only. Timeouts and generic 500s are NOT included — they usually mean
             // generation started (or the whole network is struggling) and cascading
             // them across every server would multiply the pain.
-            const unavailable = /not found|does not exist|invalid model|failed to load|no models loaded|model unloaded|lm link|econnrefused|enotfound|ehostunreach|enetunreach|econnreset|connection closed prematurely/i.test(msg);
+            const unavailable = /not found|does not exist|invalid model|failed to load|no models loaded|model unloaded|lm link|econnrefused|enotfound|ehostunreach|enetunreach|econnreset|connection closed prematurely|engine protocol|predict request failed/i.test(msg);
             if (!unavailable || reported || ac.signal.aborted) throw err;
             // Alternate candidates by id; re-resolve each against LIVE config — the
             // discovery snapshot may hold stale baseUrl/apiKey/enabled values.

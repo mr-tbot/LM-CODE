@@ -2,6 +2,13 @@
 
 All notable changes to LM-CODE.
 
+## 0.11.1 — 2026-07-22
+
+- Treat LM Studio "Engine protocol predict request failed: fetch failed" (internal
+  engine/LM Link hop dying, typically during a model crash or reload) as transient:
+  retried once on the same server, then failed over to another server listing the
+  model — when nothing has been streamed yet.
+
 ## 0.11.0 — 2026-07-20
 
 ### Big context windows (256K → 1M and beyond)
