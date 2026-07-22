@@ -28,7 +28,7 @@ export function activate(context: vscode.ExtensionContext): void {
         context.subscriptions.push(
             registry.onModelsChanged(models => {
                 if (!statusBar) return;
-                statusBar.text = `$(server) LM-CODE: ${models.length}`;
+                statusBar.text = `$(server) LM-Code: ${models.length}`;
                 statusBar.show();
             })
         );
@@ -41,7 +41,7 @@ export function activate(context: vscode.ExtensionContext): void {
         }),
         vscode.commands.registerCommand('lmstudioCopilot.refreshNow', async () => {
             await registry.refreshAll();
-            vscode.window.setStatusBarMessage('LM-CODE: refreshed', 2000);
+            vscode.window.setStatusBarMessage('LM-Code: refreshed', 2000);
         }),
         vscode.commands.registerCommand('lmstudioCopilot.addServer', async () => {
             const servers = getServers();

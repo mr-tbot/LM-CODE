@@ -1,5 +1,6 @@
 .vscode/**
 .vscode-test/**
+.agent/**
 src/**
 .gitignore
 .yarnrc
@@ -8,7 +9,7 @@ tsconfig.json
 **/*.ts
 node_modules/**
 !media/**
-!out/**
+!out/**/*.js
 !package.json
 !README.md
 !LICENSE

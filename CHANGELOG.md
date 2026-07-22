@@ -2,6 +2,16 @@
 
 All notable changes to LM-CODE.
 
+## 0.11.2 — 2026-07-22
+
+- Extension publisher renamed `monsi` → `mr-tbot`; the extension ID is now
+  `mr-tbot.lm-code`. Uninstall the old `monsi.lm-code` before installing this
+  version (settings are unaffected — they live under `lmstudioCopilot.*`).
+- Status bar item now reads `LM-Code: N` (was `LM-CODE: N`), matching the
+  transient "LM-Code: refreshed" message.
+- Packaging: `.vscodeignore` now excludes `.agent/` working files and
+  sourcemaps from the VSIX (91 → 14 files).
+
 ## 0.11.1 — 2026-07-22
 
 - Treat LM Studio "Engine protocol predict request failed: fetch failed" (internal
